@@ -1,6 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
+import * as crypto from 'crypto';
+
+// Polyfill global crypto for older Node.js versions on the server
+if (typeof global.crypto === 'undefined') {
+  (global as any).crypto = (crypto as any).webcrypto || crypto;
+}
 
 // Explicitly load .env file before anything else
 dotenv.config();
