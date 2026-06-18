@@ -6,12 +6,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { Admin, AdminSchema } from '../schemas/admin.schema';
+import { User, UserSchema } from '../schemas/rbac/user.schema';
+import { Project, ProjectSchema } from '../schemas/project.schema';
+import { RbacModule } from '../rbac/rbac.module';
 import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Admin.name, schema: AdminSchema }]),
+    MongooseModule.forFeature([
+      { name: Admin.name, schema: AdminSchema },
+      { name: User.name, schema: UserSchema },
+      { name: Project.name, schema: ProjectSchema },
+    ]),
     PassportModule,
+    RbacModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -26,3 +34,4 @@ import { JwtStrategy } from './jwt.strategy';
   exports: [AuthService],
 })
 export class AuthModule {}
+

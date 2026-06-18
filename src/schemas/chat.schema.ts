@@ -14,6 +14,11 @@ export class Chat extends Document {
 
   @Prop()
   userId: string;
+
+  @Prop({ required: false })
+  phone: string;
 }
+
+
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);

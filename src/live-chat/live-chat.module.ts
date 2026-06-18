@@ -6,6 +6,7 @@ import { LiveChatController } from './live-chat.controller';
 import { LiveChat, LiveChatSchema } from '../schemas/live-chat.schema';
 import { LiveLead, LiveLeadSchema } from '../schemas/live-lead.schema';
 import { LiveSupport, LiveSupportSchema } from '../schemas/live-support.schema';
+import { ChatSession, ChatSessionSchema } from '../schemas/chat-session.schema';
 
 @Module({
   imports: [
@@ -13,9 +14,11 @@ import { LiveSupport, LiveSupportSchema } from '../schemas/live-support.schema';
       { name: LiveChat.name, schema: LiveChatSchema },
       { name: LiveLead.name, schema: LiveLeadSchema },
       { name: LiveSupport.name, schema: LiveSupportSchema },
+      { name: ChatSession.name, schema: ChatSessionSchema },
     ]),
   ],
   providers: [LiveChatGateway, LiveChatService],
   controllers: [LiveChatController],
 })
 export class LiveChatModule {}
+
