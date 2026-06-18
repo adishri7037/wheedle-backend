@@ -50,7 +50,7 @@ export class DashboardService {
 
     return {
       message: 'Welcome Admin Dashboard',
-      adminId: user.id,
+      adminId: user?.id ?? user?._id ?? null,
       counts: {
         leads,
         formLeads,

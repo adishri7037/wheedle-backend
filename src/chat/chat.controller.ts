@@ -1,7 +1,9 @@
-import { Controller, Post, Get, Body, Query, Headers, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, Headers, Req, UnauthorizedException, Param } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { FindByPhoneDto } from './dto/find-by-phone.dto';
+
 
 @Controller('chat')
 export class ChatController {
@@ -13,6 +15,24 @@ export class ChatController {
   @Get('history')
   async getHistory(@Query('sessionId') sessionId: string) {
     return this.chatService.getChatHistory(sessionId);
+  }
+
+  @Get('history/:sessionId')
+  async getHistoryBySession(@Param('sessionId') sessionId: string) {
+    return this.chatService.getChatHistory(sessionId);
+  }
+
+  @Post('find-by-phone')
+  async findByPhone(
+    @Body() body: FindByPhoneDto,
+    @Headers('x-api-key') apiKey: string,
+  ) {
+    const expectedKey = this.configService.get<string>('API_KEY_SECRET');
+    if (apiKey !== expectedKey) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    return this.chatService.findSessionsByPhone(body.phone);
   }
 
   @Post()

@@ -19,6 +19,13 @@ import { StepModule } from './step/step.module';
 import { FormLeadModule } from './form-lead/form-lead.module';
 import { LeadModule } from './lead/lead.module';
 import { ProfileModule } from './profile/profile.module';
+import { RbacModule } from './rbac/rbac.module';
+import { TasksModule } from './tasks/tasks.module';
+import { ClientQueriesModule } from './client-queries/client-queries.module';
+import { EmployeeDashboardModule } from './employee-dashboard/employee-dashboard.module';
+import { ProjectsModule } from './projects/projects.module';
+import { UploadModule } from './upload/upload.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -50,6 +57,13 @@ import { ProfileModule } from './profile/profile.module';
     FormLeadModule,
     LeadModule,
     ProfileModule,
+    RbacModule,
+    TasksModule,
+    ClientQueriesModule,
+    EmployeeDashboardModule,
+    ProjectsModule,
+    UploadModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

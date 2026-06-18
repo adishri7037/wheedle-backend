@@ -1,12 +1,14 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+                                                                                                                                                                                                                                      import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 import { Chat } from '../schemas/chat.schema';
 import { UserContact } from '../schemas/user-contact.schema';
+import { ChatSession } from '../schemas/chat-session.schema';
 import * as fs from 'fs';
 import * as path from 'path';
+
 
 // @ts-ignore
 const pdf = require('pdf-parse');
@@ -49,9 +51,11 @@ export class ChatService implements OnModuleInit {
 
   constructor(
     @InjectModel(Chat.name) private chatModel: Model<Chat>,
+    @InjectModel(ChatSession.name) private chatSessionModel: Model<ChatSession>,
     @InjectModel(UserContact.name) private contactModel: Model<UserContact>,
     private configService: ConfigService,
   ) {
+
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
@@ -72,13 +76,59 @@ export class ChatService implements OnModuleInit {
     return this.chatModel.find({ sessionId }).sort({ createdAt: 1 }).exec();
   }
 
-  async saveMessage(sessionId: string, role: string, message: string, userId?: string) {
-    const newChat = new this.chatModel({ sessionId, role, message, userId });
+  async findSessionsByPhone(phone: string) {
+    const normalizedPhone = phone.replace(/\D/g, '');
+    const sessions = await this.chatSessionModel
+      .find({ phone: normalizedPhone })
+      .sort({ updatedAt: -1 })
+      .exec();
+
+
+    if (!sessions || sessions.length === 0) {
+      return { success: false, message: 'No previous conversations found.' };
+    }
+
+    // lastMessage per session
+    const out = await Promise.all(
+      sessions.map(async (s) => {
+        const last = await this.chatModel
+          .find({ sessionId: s.sessionId })
+          .sort({ createdAt: -1 })
+          .limit(1)
+          .exec();
+
+        const createdAt = (s as any).createdAt as Date | undefined;
+        const updatedAt = (s as any).updatedAt as Date | undefined;
+
+        return {
+          sessionId: s.sessionId,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          lastMessage: last?.[0]?.message || '',
+        };
+
+      }),
+    );
+
+    return { success: true, sessions: out };
+  }
+
+
+  async saveMessage(sessionId: string, role: string, message: string, userId?: string, phone?: string) {
+    const newChat = new this.chatModel({ sessionId, role, message, userId, phone });
     return newChat.save();
   }
 
+  private async resolvePhoneForSession(sessionId: string): Promise<string | undefined> {
+    const session = await this.chatSessionModel.findOne({ sessionId }).exec();
+    return session?.phone;
+  }
+
   async askAI(sessionId: string, message: string, userId?: string, ip?: string) {
+    const resolvedPhone = await this.resolvePhoneForSession(sessionId);
+
     const msgLower = message.toLowerCase().trim();
+
 
     // Check if waiting for contact
     if (this.waitingForContact.get(ip || 'default')) {
@@ -146,8 +196,14 @@ ${this.pdfContent.substring(0, 8000)}
 
     const assistantMessage = response.choices[0].message.content || '';
 
+    // Persist messages with phone association (if available)
+    const phone = resolvedPhone;
+    await this.saveMessage(sessionId, 'user', message, userId, phone);
+    await this.saveMessage(sessionId, 'assistant', assistantMessage, userId, phone);
+
     this.userQuestionCount.set(ip || 'default', count + 1);
 
     return { response: assistantMessage };
   }
 }
+

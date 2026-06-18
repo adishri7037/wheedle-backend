@@ -5,6 +5,7 @@ import { LiveChat } from '../schemas/live-chat.schema';
 import { LiveLead } from '../schemas/live-lead.schema';
 import { LiveSupport } from '../schemas/live-support.schema';
 import { LiveChatGateway } from './live-chat.gateway';
+import { ChatSession } from '../schemas/chat-session.schema';
 
 @Injectable()
 export class LiveChatService {
@@ -12,8 +13,13 @@ export class LiveChatService {
     @InjectModel(LiveChat.name) private chatModel: Model<LiveChat>,
     @InjectModel(LiveLead.name) private leadModel: Model<LiveLead>,
     @InjectModel(LiveSupport.name) private supportModel: Model<LiveSupport>,
+    @InjectModel(ChatSession.name) private chatSessionModel: Model<ChatSession>,
     private gateway: LiveChatGateway,
   ) {}
+
+  private normalizePhone(phone: any) {
+    return (phone || '').toString().replace(/\D/g, '');
+  }
 
   async createLead(data: any) {
     const lead = await new this.leadModel(data).save();
@@ -27,6 +33,28 @@ export class LiveChatService {
       lead_id: lead._id,
       messages: [],
     }).save();
+
+    // Create/Update ChatSession for mobile-based continuation (sessionId == chat_id)
+    try {
+      await this.chatSessionModel
+        .updateOne(
+          { sessionId: chat._id.toString() },
+          {
+            $set: {
+              sessionId: chat._id.toString(),
+              phone: this.normalizePhone(data.mobile),
+              name: chat.name,
+              email: chat.email || '',
+              status: chat.status || 'active',
+            },
+          },
+          { upsert: true },
+        )
+        .exec();
+    } catch (e) {
+      // non-blocking
+      console.error('[LiveChatService] ChatSession upsert failed (new-user-lead):', e);
+    }
 
     this.gateway.emitNewChat({
       chat_id: chat._id,
@@ -52,6 +80,28 @@ export class LiveChatService {
       support_id: support._id,
       messages: [],
     }).save();
+
+    // Create/Update ChatSession for mobile-based continuation (sessionId == chat_id)
+    try {
+      await this.chatSessionModel
+        .updateOne(
+          { sessionId: chat._id.toString() },
+          {
+            $set: {
+              sessionId: chat._id.toString(),
+              phone: this.normalizePhone(data.mobile),
+              name: chat.name,
+              email: chat.email || '',
+              status: chat.status || 'active',
+            },
+          },
+          { upsert: true },
+        )
+        .exec();
+    } catch (e) {
+      // non-blocking
+      console.error('[LiveChatService] ChatSession upsert failed (client-support):', e);
+    }
 
     this.gateway.emitNewChat({
       chat_id: chat._id,
@@ -79,3 +129,4 @@ export class LiveChatService {
     return { ok: true };
   }
 }
+
