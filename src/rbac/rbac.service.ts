@@ -208,6 +208,42 @@ export class RbacService implements OnModuleInit {
     return perms.map((p) => `${p.moduleKey}:${p.permissionKey}`);
   }
 
+  async getUsersWithPermission(tenantId: string, moduleKey: string, permissionKey: string): Promise<string[]> {
+    const permission = await this.permissionModel.findOne({
+      tenantId: new Types.ObjectId(tenantId),
+      moduleKey,
+      permissionKey,
+    }).select('_id').lean();
+
+    const roleIds: Types.ObjectId[] = [];
+    if (permission) {
+      const rolePermissions = await this.rolePermissionModel.find({
+        tenantId: new Types.ObjectId(tenantId),
+        permissionId: permission._id,
+      }).select('roleId').lean();
+      roleIds.push(...rolePermissions.map((rp) => rp.roleId));
+    }
+
+    const superAdminRole = await this.roleModel.findOne({
+      tenantId: new Types.ObjectId(tenantId),
+      name: 'Super Admin',
+    }).select('_id').lean();
+    
+    if (superAdminRole) {
+      roleIds.push(superAdminRole._id);
+    }
+
+    if (roleIds.length === 0) return [];
+
+    const userRoles = await this.userRoleModel.find({
+      tenantId: new Types.ObjectId(tenantId),
+      roleId: { $in: roleIds },
+    }).select('userId').lean();
+
+    const userIds = userRoles.map((ur) => ur.userId.toString());
+    return [...new Set(userIds)];
+  }
+
   async can({
     tenantId,
     userId,

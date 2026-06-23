@@ -6,6 +6,7 @@ import { Task, TaskSchema } from '../schemas/task.schema';
 import { User, UserSchema } from '../schemas/rbac/user.schema';
 import { Notification, NotificationSchema } from '../schemas/notification.schema';
 import { RbacModule } from '../rbac/rbac.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RbacModule } from '../rbac/rbac.module';
       { name: Notification.name, schema: NotificationSchema },
     ]),
     RbacModule,
+    NotificationsModule,
   ],
   providers: [TasksService],
   controllers: [TasksController],

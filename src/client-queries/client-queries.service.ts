@@ -6,6 +6,8 @@ import { Notification } from '../schemas/notification.schema';
 import { Task } from '../schemas/task.schema';
 import { ClientQueriesGateway } from './client-queries.gateway';
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class ClientQueriesService {
   constructor(
@@ -14,17 +16,22 @@ export class ClientQueriesService {
     @InjectModel(Task.name) private taskModel: Model<Task>,
     @Inject(forwardRef(() => ClientQueriesGateway))
     private clientQueriesGateway: ClientQueriesGateway,
+    private notificationsService: NotificationsService,
   ) {}
 
-  async createNotification(tenantId: string, userId: string, title: string, message: string, type?: string) {
+  async createNotification(tenantId: string, userId: string, title: string, message: string, type?: string, queryId?: string) {
     try {
-      await this.notificationModel.create({
-        tenantId: new Types.ObjectId(tenantId),
-        userId: new Types.ObjectId(userId),
+      await this.notificationsService.createEvent({
+        tenantId,
         title,
         message,
-        isRead: false,
+        category: 'query',
+        priority: 'high',
         type: type || 'query_notification',
+        resourceType: 'client-query',
+        resourceId: queryId || 'system',
+        link: 'queries',
+        specificUserIds: [userId]
       });
     } catch (e) {
       console.error('Failed to create query notification:', e);

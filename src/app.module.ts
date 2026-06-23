@@ -26,6 +26,8 @@ import { EmployeeDashboardModule } from './employee-dashboard/employee-dashboard
 import { ProjectsModule } from './projects/projects.module';
 import { UploadModule } from './upload/upload.module';
 import { EmailModule } from './email/email.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -64,6 +66,8 @@ import { EmailModule } from './email/email.module';
     ProjectsModule,
     UploadModule,
     EmailModule,
+    InvoicesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

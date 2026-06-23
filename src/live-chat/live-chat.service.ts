@@ -6,6 +6,7 @@ import { LiveLead } from '../schemas/live-lead.schema';
 import { LiveSupport } from '../schemas/live-support.schema';
 import { LiveChatGateway } from './live-chat.gateway';
 import { ChatSession } from '../schemas/chat-session.schema';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class LiveChatService {
@@ -15,6 +16,7 @@ export class LiveChatService {
     @InjectModel(LiveSupport.name) private supportModel: Model<LiveSupport>,
     @InjectModel(ChatSession.name) private chatSessionModel: Model<ChatSession>,
     private gateway: LiveChatGateway,
+    private notificationsService: NotificationsService,
   ) {}
 
   private normalizePhone(phone: any) {
@@ -65,6 +67,22 @@ export class LiveChatService {
       created_at: chat['createdAt'],
     });
 
+    try {
+      await this.notificationsService.createEvent({
+        title: 'New Live Chat',
+        message: `${data.name} started a new chat for ${data.service}`,
+        category: 'chat',
+        priority: 'high',
+        resourceType: 'live-chat',
+        resourceId: chat._id.toString(),
+        link: 'livechat',
+        requiredModuleKey: 'live-chat',
+        requiredPermissionKey: 'livechat.view',
+      });
+    } catch (e) {
+      console.error('[LiveChatService] Failed to create notification for new chat:', e);
+    }
+
     return { chat_id: chat._id };
   }
 
@@ -111,6 +129,22 @@ export class LiveChatService {
       status: chat.status,
       created_at: chat['createdAt'],
     });
+
+    try {
+      await this.notificationsService.createEvent({
+        title: 'New Client Support Chat',
+        message: `${data.company} started a support chat`,
+        category: 'chat',
+        priority: 'high',
+        resourceType: 'live-chat',
+        resourceId: chat._id.toString(),
+        link: 'livechat',
+        requiredModuleKey: 'live-chat',
+        requiredPermissionKey: 'livechat.view',
+      });
+    } catch (e) {
+      console.error('[LiveChatService] Failed to create notification for client chat:', e);
+    }
 
     return { chat_id: chat._id };
   }

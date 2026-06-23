@@ -3,6 +3,7 @@ import { Server, Socket } from 'socket.io';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { LiveChat } from '../schemas/live-chat.schema';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @WebSocketGateway({ cors: { origin: true, credentials: true } })
 export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -11,6 +12,7 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   constructor(
     @InjectModel(LiveChat.name) private liveChatModel: Model<LiveChat>,
+    private notificationsService: NotificationsService,
   ) {
     console.log('[LiveChatGateway] Initialized');
   }
@@ -62,11 +64,16 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
       ts: new Date().toISOString(),
     };
 
+    let chatName = 'User';
     try {
-      await this.liveChatModel.findByIdAndUpdate(chat_id, {
+      const updatedChat = await this.liveChatModel.findByIdAndUpdate(chat_id, {
         $push: { messages: msg },
         $set: { updatedAt: new Date() },
-      }).exec();
+      }, { new: true }).exec();
+      
+      if (updatedChat) {
+        chatName = updatedChat.name || 'User';
+      }
     } catch (e) {
       console.error(`[SOCKET] DB error user_message:`, e);
     }
@@ -79,6 +86,24 @@ export class LiveChatGateway implements OnGatewayConnection, OnGatewayDisconnect
       file,
       ts: msg.ts,
     });
+
+    // PBAC Chat Notification to admins
+    try {
+      await this.notificationsService.createEvent({
+        title: 'New Chat Message',
+        message: `${chatName}: ${text ? text : (image ? 'Sent an image' : 'Sent a file')}`,
+        category: 'chat',
+        priority: 'medium',
+        resourceType: 'live-chat',
+        resourceId: chat_id,
+        link: 'livechat',
+        groupId: `chat_${chat_id}`,
+        requiredModuleKey: 'live-chat',
+        requiredPermissionKey: 'livechat.view',
+      });
+    } catch (e) {
+      console.error('[LiveChatGateway] Failed to create notification for user_message:', e);
+    }
   }
 
   @SubscribeMessage('agent_message')

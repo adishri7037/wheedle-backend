@@ -6,6 +6,7 @@ import { ClientQuery, ClientQuerySchema } from '../schemas/client-query.schema';
 import { Notification, NotificationSchema } from '../schemas/notification.schema';
 import { Task, TaskSchema } from '../schemas/task.schema';
 import { RbacModule } from '../rbac/rbac.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ClientQueriesGateway } from './client-queries.gateway';
 
 @Module({
@@ -16,6 +17,7 @@ import { ClientQueriesGateway } from './client-queries.gateway';
       { name: Task.name, schema: TaskSchema },
     ]),
     RbacModule,
+    NotificationsModule,
   ],
   providers: [ClientQueriesService, ClientQueriesGateway],
   controllers: [ClientQueriesController],

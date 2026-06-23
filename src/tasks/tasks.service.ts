@@ -5,26 +5,32 @@ import { Task } from '../schemas/task.schema';
 import { User } from '../schemas/rbac/user.schema';
 import { Notification } from '../schemas/notification.schema';
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class TasksService {
   constructor(
     @InjectModel(Task.name) private taskModel: Model<Task>,
     @InjectModel(User.name) private userModel: Model<User>,
-    @InjectModel(Notification.name) private notificationModel: Model<Notification>,
+    private notificationsService: NotificationsService,
   ) {}
 
-  async notifyAssignees(tenantId: string, assigneeIds: Types.ObjectId[], title: string, message: string) {
+  async notifyAssignees(tenantId: string, assigneeIds: Types.ObjectId[], title: string, message: string, taskId: string) {
     try {
-      const notifications = assigneeIds.map((userId) => ({
-        tenantId: new Types.ObjectId(tenantId),
-        userId,
-        title,
-        message,
-        isRead: false,
-        type: 'task_assigned',
-      }));
-      if (notifications.length > 0) {
-        await this.notificationModel.insertMany(notifications);
+      const userIds = assigneeIds.map(id => id.toString());
+      if (userIds.length > 0) {
+        await this.notificationsService.createEvent({
+          tenantId,
+          title,
+          message,
+          category: 'task',
+          priority: 'medium',
+          type: 'task_assigned',
+          resourceType: 'task',
+          resourceId: taskId,
+          link: 'tasks',
+          specificUserIds: userIds
+        });
       }
     } catch (e) {
       console.error('Failed to create notification:', e);
@@ -56,7 +62,7 @@ export class TasksService {
 
     const savedTask = await task.save();
     if (assigneeIds.length > 0) {
-      await this.notifyAssignees(tenantId, assigneeIds, 'New Task Assigned', `You have been assigned to: ${title}`);
+      await this.notifyAssignees(tenantId, assigneeIds, 'New Task Assigned', `You have been assigned to: ${title}`, savedTask._id.toString());
     }
     return savedTask;
   }
@@ -160,7 +166,8 @@ export class TasksService {
           tenantId,
           newAssignees.map((aId: string) => new Types.ObjectId(aId)),
           'New Task Assigned',
-          `You have been assigned to: ${task.title}`
+          `You have been assigned to: ${task.title}`,
+          task._id.toString()
         );
       }
     }
@@ -236,7 +243,8 @@ export class TasksService {
         tenantId,
         [new Types.ObjectId(payload.assigneeId)],
         'Task Assigned via Calendar',
-        `You have been assigned to: ${task.title}`
+        `You have been assigned to: ${task.title}`,
+        task._id.toString()
       );
     }
 
